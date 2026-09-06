@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ShopSphere</title>
+  <style>
+    :root{font-family:Inter,system-ui,sans-serif;color:#14213d;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}.top{background:linear-gradient(120deg,#0033a0,#0077b6);color:#fff;padding:28px 6%}.top h1{margin:0 0 5px}.wrap{max-width:1150px;margin:25px auto;padding:0 20px}.panel{background:white;padding:18px;border-radius:14px;box-shadow:0 5px 22px #18315315;margin-bottom:20px}.row{display:flex;gap:10px;flex-wrap:wrap}input{padding:10px;border:1px solid #ccd5e0;border-radius:8px}button{border:0;padding:10px 15px;border-radius:8px;background:#0033a0;color:white;cursor:pointer}button.alt{background:#e9eef9;color:#0033a0}.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.card{border:1px solid #e0e6ef;border-radius:12px;padding:16px}.card h3{margin-top:0}.price{font-size:1.35rem;color:#0033a0;font-weight:700}.msg{min-height:24px;color:#096b3b}.orders{display:grid;gap:8px}.order{padding:10px;background:#f3f6fb;border-radius:8px}@media(max-width:600px){input,button{width:100%}}
+  </style>
+</head>
+<body>
+  <header class="top"><h1>ShopSphere</h1><div>Cloud-native microservices demo store</div></header>
+  <main class="wrap">
+    <section class="panel"><h2>User account</h2><div class="row"><input id="username" placeholder="Username"><input id="password" type="password" placeholder="Password"><button onclick="register()">Register</button><button class="alt" onclick="login()">Login</button></div><p id="message" class="msg"></p></section>
+    <section class="panel"><div class="row" style="justify-content:space-between"><h2>Products</h2><button onclick="loadProducts()">Refresh</button></div><div id="products" class="products">Loading…</div></section>
+    <section class="panel"><div class="row" style="justify-content:space-between"><h2>My orders</h2><button onclick="loadOrders()">Load orders</button></div><div id="orders" class="orders">Log in to view orders.</div></section>
+  </main>
+  <script>
+    let currentUser=localStorage.getItem('username')||'';
+    const msg=t=>document.getElementById('message').textContent=t;
+    async function api(path,options={}){const r=await fetch(path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});const d=await r.json();if(!r.ok)throw new Error(d.detail||'Request failed');return d}
+    async function register(){try{const d=await api('/api/users/register',{method:'POST',body:JSON.stringify({username:username.value,password:password.value})});msg(d.message+' — now log in.')}catch(e){msg(e.message)}}
+    async function login(){try{const d=await api('/api/users/login',{method:'POST',body:JSON.stringify({username:username.value,password:password.value})});currentUser=d.username;localStorage.setItem('username',currentUser);localStorage.setItem('token',d.token);msg('Logged in as '+currentUser);loadOrders()}catch(e){msg(e.message)}}
+    async function loadProducts(){try{const items=await api('/api/products');products.innerHTML=items.map(p=>`<article class="card"><h3>${p.name}</h3><p>${p.description}</p><div class="price">$${p.price.toFixed(2)}</div><p>${p.stock} in stock</p><button onclick='buy(${JSON.stringify(p)})'>Buy now</button></article>`).join('')}catch(e){products.textContent=e.message}}
+    async function buy(p){if(!currentUser){msg('Please register and log in first.');return}try{const d=await api('/api/orders',{method:'POST',body:JSON.stringify({username:currentUser,product_id:p.id,product_name:p.name,quantity:1,total:p.price})});msg('Order #'+d.id+' placed successfully.');loadOrders()}catch(e){msg(e.message)}}
+    async function loadOrders(){if(!currentUser){orders.textContent='Log in to view orders.';return}try{const data=await api('/api/orders/'+currentUser);orders.innerHTML=data.length?data.map(o=>`<div class="order"><b>#${o.id} ${o.product_name}</b> — $${o.total.toFixed(2)} — ${o.status}</div>`).join(''):'No orders yet.'}catch(e){orders.textContent=e.message}}
+    if(currentUser)msg('Welcome back, '+currentUser);loadProducts();loadOrders();
+  </script>
+</body>
+</html>
