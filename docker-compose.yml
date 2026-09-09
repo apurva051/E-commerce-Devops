@@ -1,0 +1,193 @@
+services:
+
+  mongodb:
+    image: mongo:7
+    container_name: ecommerce-mongodb
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecommerce-postgres
+    environment:
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce
+      POSTGRES_DB: orders
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce -d orders"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  product-service:
+    build:
+      context: ./product-service
+    image: ecommerce-product-service:1.0
+    container_name: ecommerce-product-service
+    environment:
+      MONGO_URL: mongodb://ecommerce-mongodb:27017
+      MONGO_DATABASE: ecommerce
+    ports:
+      - "8001:8001"
+    networks:
+      - app-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./user-service
+    image: ecommerce-user-service:1.0
+    container_name: ecommerce-user-service
+    environment:
+      REDIS_URL: redis://ecommerce-redis:6379/0
+    ports:
+      - "8003:8003"
+    networks:
+      - app-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./order-service
+    image: ecommerce-order-service:1.0
+    container_name: ecommerce-order-service
+    environment:
+      DATABASE_URL: postgresql://ecommerce:ecommerce@ecommerce-postgres:5432/orders
+    ports:
+      - "8002:8002"
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    image: ecommerce-api-gateway:1.1
+    container_name: ecommerce-api-gateway
+    environment:
+      PRODUCT_SERVICE_URL: http://ecommerce-product-service:8001
+      ORDER_SERVICE_URL: http://ecommerce-order-service:8002
+      USER_SERVICE_URL: http://ecommerce-user-service:8003
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    depends_on:
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    image: ecommerce-frontend:1.2
+    container_name: ecommerce-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - app-network
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
+
+networks:
+  app-network:
+    name: app-network
+    driver: bridge
+
+
+volumes:
+  mongo-data:
+    name: ecommerce-mongo-data
+
+  postgres-data:
+    name: ecommerce-postgres-data
+
+  redis-data:
+    name: ecommerce-redis-data
