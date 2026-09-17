@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: ecommerce
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: api-gateway
+
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: apurva051/ecommerce-api-gateway:1.0
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8000
+
+          env:
+            - name: PRODUCT_SERVICE_URL
+              value: http://ecommerce-product-service:8001
+
+            - name: ORDER_SERVICE_URL
+              value: http://ecommerce-order-service:8002
+
+            - name: USER_SERVICE_URL
+              value: http://ecommerce-user-service:8003
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 18
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-api-gateway
+  namespace: ecommerce
+spec:
+  type: ClusterIP
+
+  selector:
+    app: api-gateway
+
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

@@ -1,9 +1,16 @@
-__pycache__/
-*.py[cod]
-.env
-.venv/
+# Python
 venv/
-.idea/
-.vscode/
-*.log
+env/
+__pycache__/
+*.pyc
 
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+
+# Credentials and secrets
+*.pem
+k8s/config/postgres-secret.yaml
