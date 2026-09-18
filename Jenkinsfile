@@ -10,6 +10,8 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'apurva051/ecommerce-product-service'
+        GITOPS_REPO = 'https://github.com/apurva051/ecommerce-gitops.git'
+        GITOPS_FILE = 'environments/dev/apps/product-service.yaml'
     }
 
     stages {
@@ -86,6 +88,50 @@ pipeline {
                         docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
 
                         docker logout
+                    '''
+                }
+            }
+        }
+        stage ('Update GitOps Repository'){
+            steps{
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'gitopscreds',
+                        usernameVariable: 'GITHUB_USERNAME',
+                        passwordVariable: 'GITHUB_TOKEN'
+                    )
+                ]){
+                    sh '''
+                        set -e
+                        set +x
+
+                        rm -rf gitops-work
+
+                        git clone "http://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" gitops-work
+
+                        cd gitops-work
+                        git config user.name "jenkins-ci"
+                        git config user.email "jenkins-ci@users.noreply.github.com"
+
+                        sed -i -E "s#^([[:space:]]*image:[[:space:]]*apurva051/ecommerce-product-service:).*#\\1${IMAGE_TAG}#" \
+                        "${GITOPS_FILE}"
+
+                        echo "Updated image"
+                        grep "image:" "${GITOPS_FILE}"
+
+                        git add "${GITOPS_FILE}"
+
+                        if git diff --cached --quiet; then
+                            echo "GitOps image tag is already up to date"
+                        else
+                            git commit -m "Deploy product-service ${IMAGE_TAG}"
+                            git push origin main
+                        fi
+
+                        cd ..
+                        rm -rf gitops-work
+
+                        set -x
                     '''
                 }
             }
