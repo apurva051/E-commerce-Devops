@@ -107,7 +107,7 @@ pipeline {
 
                         rm -rf gitops-work
 
-                        git clone "http://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" gitops-work
+                        git clone "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" gitops-work
 
                         cd gitops-work
                         git config user.name "jenkins-ci"
@@ -125,7 +125,7 @@ pipeline {
                             echo "GitOps image tag is already up to date"
                         else
                             git commit -m "Deploy product-service ${IMAGE_TAG}"
-                            git push origin main
+                            git push \ "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" \ HEAD:main
                         fi
 
                         cd ..
