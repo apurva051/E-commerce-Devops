@@ -9,9 +9,17 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE = 'apurva051/ecommerce-product-service'
+        DOKERHUB_NAMESPACE = 'apurva051'
+
+        PRODUCT_IMAGE  = 'apurva051/ecommerce-product-service'
+        ORDER_IMAGE    = 'apurva051/ecommerce-order-service'
+        USER_IMAGE     = 'apurva051/ecommerce-user-service'
+        GATEWAY_IMAGE  = 'apurva051/ecommerce-api-gateway'
+        FRONTEND_IMAGE = 'apurva051/ecommerce-frontend'
+
         GITOPS_REPO = 'https://github.com/apurva051/ecommerce-gitops.git'
-        GITOPS_FILE = 'environments/dev/apps/product-service.yaml'
+        GITOPS_BRANCH = 'main'
+        GITOPS_ROOT = 'environment'
     }
 
     stages {
@@ -32,7 +40,7 @@ pipeline {
 
                     env.IMAGE_TAG = "${env.BUILD_NUMBER}-${shortCommit}"
 
-                    echo "Docker image: ${env.DOCKER_IMAGE}:${env.IMAGE_TAG}"
+                     echo "Image tag for this build: ${env.IMAGE_TAG}"
                 }
             }
         }
@@ -43,11 +51,17 @@ pipeline {
                     set -e
 
                     echo "Checking required tools and files..."
-
                     git --version
                     docker --version
 
+                    echo "Checking Dockerfiles..."
                     test -f product-service/Dockerfile
+                    test -f order-service/Dockerfile
+                    test -f user-service/Dockerfile
+                    test -f api-gateway/Dockerfile
+                    test -f frontend/Dockerfile
+
+                    git diff --check
 
                     echo "Validation completed."
                 '''
@@ -57,11 +71,29 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
+                    set -e
+
                     echo "Building Docker image..."
 
                     docker build \
                       --tag ${DOCKER_IMAGE}:${IMAGE_TAG} \
                       ./product-service
+
+                    docker build \
+                      -t ${ORDER_IMAGE}:${IMAGE_TAG} \
+                      ./order-service
+
+                    docker build \
+                      -t ${USER_IMAGE}:${IMAGE_TAG} \
+                      ./user-service
+
+                    docker build \
+                      -t ${GATEWAY_IMAGE}:${IMAGE_TAG} \
+                      ./api-gateway
+
+                    docker build \
+                      -t ${FRONTEND_IMAGE}:${IMAGE_TAG} \
+                      ./frontend
                 '''
             }
         }
@@ -85,9 +117,13 @@ pipeline {
 
                         set -x
 
-                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                        docker push ${PRODUCT_IMAGE}:${IMAGE_TAG}
+                        docker push ${ORDER_IMAGE}:${IMAGE_TAG}
+                        docker push ${USER_IMAGE}:${IMAGE_TAG}
+                        docker push ${GATEWAY_IMAGE}:${IMAGE_TAG}
+                        docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
 
-                        docker logout
+                    
                     '''
                 }
             }
@@ -113,21 +149,44 @@ pipeline {
                         git config user.name "jenkins-ci"
                         git config user.email "jenkins-ci@users.noreply.github.com"
 
-                        sed -i -E "s#^([[:space:]]*image:[[:space:]]*apurva051/ecommerce-product-service:).*#\\1${IMAGE_TAG}#" \
-                        "${GITOPS_FILE}"
+                        sed -i -E \
+                          "s#^([[:space:]]*image:[[:space:]]*${PRODUCT_IMAGE}:).*#\\1${IMAGE_TAG}#" \
+                          "${GITOPS_ROOT}/apps/product-service.yaml"
 
-                        echo "Updated image"
-                        grep "image:" "${GITOPS_FILE}"
+                        sed -i -E \
+                          "s#^([[:space:]]*image:[[:space:]]*${ORDER_IMAGE}:).*#\\1${IMAGE_TAG}#" \
+                          "${GITOPS_ROOT}/apps/order-service.yaml"
 
-                        git add "${GITOPS_FILE}"
+                        sed -i -E \
+                          "s#^([[:space:]]*image:[[:space:]]*${USER_IMAGE}:).*#\\1${IMAGE_TAG}#" \
+                          "${GITOPS_ROOT}/apps/user-service.yaml"
+
+                        sed -i -E \
+                          "s#^([[:space:]]*image:[[:space:]]*${GATEWAY_IMAGE}:).*#\\1${IMAGE_TAG}#" \
+                          "${GITOPS_ROOT}/gateway/api-gateway.yaml"
+
+                        sed -i -E \
+                          "s#^([[:space:]]*image:[[:space:]]*${FRONTEND_IMAGE}:).*#\\1${IMAGE_TAG}#" \
+                          "${GITOPS_ROOT}/frontend/frontend.yaml"
+
+
+                        echo "Updated GitOps image references:"
+                        grep -R -n "image:" \
+                          "${GITOPS_ROOT}/apps" \
+                          "${GITOPS_ROOT}/gateway" \
+                          "${GITOPS_ROOT}/frontend"
+
+                        git add "${GITOPS_ROOT}"
 
                         if git diff --cached --quiet; then
-                            echo "GitOps image tag is already up to date"
+                            echo "GitOps manifests are already up to date."
                         else
-                            git commit -m "Deploy product-service ${IMAGE_TAG}"
+                            git commit \
+                              -m "Deploy ecommerce services ${IMAGE_TAG}"
+
                             git push \
-                            "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" \
-                            HEAD:main
+                              "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" \
+                              HEAD:${GITOPS_BRANCH}
                         fi
 
                         cd ..
@@ -154,10 +213,15 @@ pipeline {
             sh '''
                 if [ -n "${IMAGE_TAG}" ]; then
                     docker image rm \
-                      ${DOCKER_IMAGE}:${IMAGE_TAG} || true
+                      ${PRODUCT_IMAGE}:${IMAGE_TAG} \
+                      ${ORDER_IMAGE}:${IMAGE_TAG} \
+                      ${USER_IMAGE}:${IMAGE_TAG} \
+                      ${GATEWAY_IMAGE}:${IMAGE_TAG} \
+                      ${FRONTEND_IMAGE}:${IMAGE_TAG} || true
                 fi
 
                 docker logout || true
+                rm -rf gitops-work
             '''
         }
     }
