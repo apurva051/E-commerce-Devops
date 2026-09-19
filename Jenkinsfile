@@ -19,7 +19,7 @@ pipeline {
 
         GITOPS_REPO = 'https://github.com/apurva051/ecommerce-gitops.git'
         GITOPS_BRANCH = 'main'
-        GITOPS_ROOT = 'environment'
+        GITOPS_ROOT = 'environments/dev'
     }
 
     stages {
@@ -76,7 +76,7 @@ pipeline {
                     echo "Building Docker image..."
 
                     docker build \
-                      --tag ${DOCKER_IMAGE}:${IMAGE_TAG} \
+                      --tag ${PRODUCT_IMAGE}:${IMAGE_TAG} \
                       ./product-service
 
                     docker build \
