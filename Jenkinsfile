@@ -170,7 +170,7 @@ pipeline {
                           "${GITOPS_ROOT}/frontend/frontend.yaml"
 
 
-                        echo "Updated GitOps image references:.."
+                        echo "Updated GitOps image references:"
                         grep -R -n "image:" \
                           "${GITOPS_ROOT}/apps" \
                           "${GITOPS_ROOT}/gateway" \
