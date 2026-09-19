@@ -125,7 +125,9 @@ pipeline {
                             echo "GitOps image tag is already up to date"
                         else
                             git commit -m "Deploy product-service ${IMAGE_TAG}"
-                            git push \ "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" \ HEAD:main
+                            git push \
+                            "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/apurva051/ecommerce-gitops.git" \
+                            HEAD:main
                         fi
 
                         cd ..
