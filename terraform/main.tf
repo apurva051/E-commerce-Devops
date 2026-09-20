@@ -79,6 +79,13 @@ resource "aws_security_group" "k3s_server" {
     cidr_blocks = [var.ssh_allowed_cidr]
   }
   ingress {
+    description = "Allow K3s API from VPC"
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["10.20.0.0/16"]
+  }
+  ingress {
     description = "Allow public HTTP traffic"
     from_port   = 80
     to_port     = 80
