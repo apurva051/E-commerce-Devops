@@ -1,26 +1,124 @@
 # ShopSphere Microservices Application Code
 
-This package intentionally contains only the application source code. Dockerfiles, Docker Compose, Jenkins, and Kubernetes configuration will be created separately during the DevOps practical.
+An end-to-end microservices application deployed on AWS using Docker, Kubernetes (K3s), Terraform, Jenkins, GitHub Actions, ArgoCD, Helm, Ansible, SonarQube, Prometheus, and Grafana.
 
-## Included components
+## Architecture
 
-- `frontend` - HTML, CSS, JavaScript and Nginx configuration
-- `api-gateway` - FastAPI gateway
-- `product-service` - FastAPI service using MongoDB
-- `order-service` - FastAPI service using PostgreSQL
-- `user-service` - FastAPI service using Redis
+```text
+Developer
+   │
+   ▼
+GitHub
+   │
+   ▼
+CI/CD ──► SonarQube ──► Docker Build ──► Docker Hub
+   │
+   ▼
+GitOps Repository
+   │
+   ▼
+ArgoCD
+   │
+   ▼
+K3s Cluster
+   │
+   ├── Frontend
+   ├── API Gateway
+   ├── Product Service
+   ├── Order Service
+   ├── User Service
+   └── MongoDB
+   │
+   ▼
+AWS ALB
+   │
+   ▼
+Application Users
 
-## Push to GitHub
+Monitoring:
+K3s ──► Prometheus ──► Grafana ──► Alerts
 
-```bash
-git init
-git add .
-git commit -m "Add initial microservices application code"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/production-microservices-devops-platform.git
-git push -u origin main
+Infrastructure:
+Terraform ──► AWS VPC / Subnets / EC2
+Ansible ──► K3s Node Configuration
 ```
 
-## Next practical
+## Tech Stack
 
-We will write and understand each Dockerfile individually, build the images, connect the services manually, and finally create Docker Compose.
+* **Cloud:** AWS
+* **Infrastructure as Code:** Terraform
+* **Containers:** Docker
+* **Orchestration:** Kubernetes / K3s
+* **CI/CD:** Jenkins, GitHub Actions
+* **GitOps:** ArgoCD
+* **Configuration Management:** Ansible
+* **Packaging:** Helm
+* **Code Quality:** SonarQube
+* **Monitoring:** Prometheus, Grafana
+* **Load Balancing:** AWS Application Load Balancer
+* **Application:** FastAPI-based microservices, MongoDB
+
+## Key Implementations
+
+* Provisioned AWS infrastructure using Terraform.
+* Built and deployed a multi-node K3s cluster.
+* Containerized microservices using Docker.
+* Implemented CI/CD pipelines for build, validation, and deployment workflows.
+* Used SonarQube for static code analysis.
+* Implemented GitOps deployment using ArgoCD.
+* Packaged Kubernetes workloads using Helm.
+* Used Ansible for Kubernetes node configuration.
+* Exposed the frontend through Kubernetes NodePort and an AWS ALB.
+* Configured Prometheus and Grafana for cluster monitoring.
+* Created Grafana dashboards for CPU, memory, pods, namespaces, and container restarts.
+* Configured alerts for infrastructure conditions such as high CPU usage.
+
+## Repositories
+
+* **Application:** `production-microservices-app-code`
+* **GitOps:** `ecommerce-gitops`
+
+## Deployment Flow
+
+```text
+Code
+ ↓
+GitHub
+ ↓
+CI/CD
+ ↓
+SonarQube + Docker Build
+ ↓
+Docker Hub
+ ↓
+GitOps Repository
+ ↓
+ArgoCD
+ ↓
+K3s
+ ↓
+AWS ALB
+ ↓
+Users
+```
+
+## Monitoring Flow
+
+```text
+K3s Cluster
+    ↓
+Prometheus
+    ↓
+Grafana
+    ↓
+Dashboards + Alerts
+```
+
+## Future Improvements
+
+* HPA and advanced Kubernetes autoscaling
+* Centralized logging
+* Distributed tracing
+* AWS private-subnet architecture
+* Automated infrastructure deployment through CI/CD
+* Additional security and resilience testing
