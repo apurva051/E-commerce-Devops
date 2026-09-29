@@ -1,0 +1,40 @@
+---
+- name: Verify supported operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+    fail_msg: "This playbook required Ubuntu"
+    success_msg: "Ubuntu detected."
+
+- name: Install required packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: true
+  loop: "{{ demo_packages }}"
+
+- name: Create Ansible configuration directory
+  ansible.builtin.file:
+    path: "{{ ansible_demo_path }}"
+    state: directory
+    owner: "{{ demo_owner }}"
+    mode: '0755'
+
+- name: Create managed-by-Ansible file
+  ansible.builtin.copy:
+    dest: "{{ ansible_demo_path }}/managed-by-ansible.txt"
+    content: ""
+    owner: "{{ demo_owner }}"
+    mode: "{{ demo_file_mode }}"
+
+- name: Generate node information
+  ansible.builtin.template:
+    src: node-info.conf.j2
+    dest: "{{ ansible_demo_path }}/node-info.conf"
+    owner: "{{ demo_owner }}"
+    mode: "{{ demo_file_mode }}"
+  notify: Node configuration changed
+
+- name: Show server role
+  ansible.builtin.debug:
+    msg: "Configured {{ server_role }} node"

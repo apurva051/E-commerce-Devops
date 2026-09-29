@@ -1,0 +1,7 @@
+---
+- name: Configure K3s nodes
+  hosts: k3s_nodes
+  become: true
+
+  roles:
+    - common

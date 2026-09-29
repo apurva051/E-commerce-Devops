@@ -1,0 +1,4 @@
+---
+- name: Node configuration changed
+  ansible.builtin.debug:
+    msg: "Node configuration changed. A service restart could happer here."

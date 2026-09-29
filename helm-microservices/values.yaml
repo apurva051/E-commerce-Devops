@@ -1,0 +1,37 @@
+namespace: ecommerce
+
+services:
+  product:
+    name: helm-product-service
+    replicas: 1
+    image: apurva051/ecommerce-product-service
+    tag: "1.0"
+    port: 8001
+
+  user: 
+    name: helm-user-service
+    replicas: 2
+    image: apurva051/ecommerce-user-service
+    tag: "1.0"
+    port: 8003
+
+  order: 
+    name: helm-order-service
+    replicas: 2
+    image: apurva051/ecommerce-order-service
+    tag: "1.0"
+    port: 8002
+
+  frontend: 
+    name: helm-frontend
+    replicas: 1
+    image: apurva051/ecommerce-frontend
+    tag: "1.0"
+    port: 80
+  
+  gateway:
+    name: helm-api-gateway
+    replicas: 1
+    image: apurva051/ecommerce-api-gateway
+    tag: "1.0"
+    port: 8000

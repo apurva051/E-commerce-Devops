@@ -14,3 +14,8 @@ __pycache__/
 # Credentials and secrets
 *.pem
 k8s/config/postgres-secret.yaml
+# SonarQube
+.scannerwork/
+
+# Generated Kubernetes manifests
+rendered.yaml

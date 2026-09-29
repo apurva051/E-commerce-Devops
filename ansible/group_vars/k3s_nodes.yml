@@ -1,0 +1,9 @@
+---
+ansible_demo_path: /opt/ansible-demo
+demo_owner: root
+demo_file_mode: '0644'
+
+demo_packages:
+  - curl 
+  - git
+  - htop
